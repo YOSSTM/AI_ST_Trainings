@@ -1,35 +1,36 @@
-# Exercise 03 — Agent Mode
+# Exercise 03 — Custom Agents (`.agent.md`)
 
-> **Concept:** Using agent mode to navigate and modify an entire codebase — and giving it the context it needs.
+> **Concept:** Create a custom Copilot agent with a scoped `description:` and restricted `tools:` to illustrate why agent boundaries matter.
 
 ---
 
 ## 🔴 The Problem
 
-The FSM is **stuck in INIT** and never transitions forward.
+The FSM is **stuck in INIT** — transitions were accidentally overwritten.
 
-A developer used Copilot Agent and asked: *"complete the FSM transitions"*.  
-But the agent had no map of the project — it generated isolated code without knowing:
-- Where the FSM is implemented (`src/fsm.c`)
-- That `FSM_AddTransition()` must be called to register transitions
-- That transitions follow the pattern: `BOOT → INIT → IDLE → RUNNING`
+A developer ran a generic Copilot agent (no `.agent.md`, no tool restrictions) and asked it to complete the FSM. With unrestricted access the agent:
+- Had `execute`, `web`, and edit-everything by default
+- Modified files it shouldn't have touched
+- Overwrote the transition list instead of appending to it
 
-Result: only the `BOOT → INIT` transition was generated, the rest is missing.
+Result: only `BOOT → INIT` survived, all other transitions are gone.
 
 ---
 
 ## 🎯 Your Task
 
-Update the file:
+Create the file:
 ```
-exercises/03_agents/workspace/.github/copilot-instructions.md
+exercises/03_agents/workspace/.github/agents/fsm-agent.agent.md
 ```
 
-Add an `## Architecture` section that describes:
-- The FSM pattern and `FSM_AddTransition()` function
-- File locations: `src/fsm.c`, `src/gpio.c`, `src/uart.c`
-- The state sequence: `BOOT → INIT → IDLE → RUNNING ⇄ ERROR → RESET → IDLE`
-- Agent-specific guidance (where to look, what pattern to follow)
+Your agent must have:
+
+| Field | Required? | What to write |
+|-------|-----------|---------------|
+| `description:` | ✅ yes | Trigger phrases — when and where this agent applies |
+| `tools:` | recommended | `[read, search, edit]` — no `execute`, no `web` |
+| Body | yes | What the agent does, FSM data structure, constraints |
 
 ---
 
@@ -37,28 +38,52 @@ Add an `## Architecture` section that describes:
 
 ```
 03_agents/
-├── broken/         ← Instructions with no architecture context
-│   └── .github/copilot-instructions.md
+├── broken/         ← Agent with vague description and unrestricted tools
+│   └── .github/agents/fsm-agent.agent.md
 ├── workspace/      ← Edit your fix HERE
-│   └── .github/copilot-instructions.md   ← UPDATE THIS
+│   └── .github/agents/fsm-agent.agent.md   ← UPDATE THIS
 └── solution/       ← Reference answer
-    └── .github/copilot-instructions.md
+    └── .github/agents/fsm-agent.agent.md
 ```
 
 ---
 
-## 🤖 How Agent Mode Works
+## 🤖 How Custom Agents Work
 
-In agent mode, Copilot:
-1. Reads `copilot-instructions.md` as its **project map**
-2. Autonomously opens and reads files it thinks are relevant
-3. Makes edits across multiple files in sequence
+```
+.github/agents/fsm-agent.agent.md
+```
 
-Without a good project map → the agent wanders, misses files, generates incomplete code.
+1. **Discovery** — Copilot reads `description:` to decide when to auto-invoke the agent
+2. **Invocation** — User types `@fsm-agent` in Copilot Chat, or Copilot triggers it automatically
+3. **Execution** — Agent operates only with the tools listed in `tools:`
+
+### FSM data structure (Python)
+
+```python
+fsm_data = {
+    "states":      list[str],               # all state names
+    "current":     str,                     # active state
+    "transitions": list[tuple[str, str]],   # (src, dst) pairs
+}
+```
+
+All transitions must appear as `(src, dst)` tuples in `fsm_data["transitions"]`.  
+The full expected sequence:
+
+```
+BOOT → INIT → IDLE → RUNNING ⇄ IDLE
+                    ↓
+                  ERROR → RESET → IDLE
+```
 
 ---
 
 ## ✅ Validate
 
 Click **"Validate My Fix"** in the simulator.  
-The validator checks for: `fsm`, `state`, `transition`, `agent`, `codebase`.
+The validator checks for:
+- `.github/agents/*.agent.md` exists
+- `description:` present and specific (≥ 20 chars)
+- `tools:` present, `execute` and `web` not included
+- Body contains: `fsm`, `transition`, `simulator`
