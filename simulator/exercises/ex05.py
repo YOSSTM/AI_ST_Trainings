@@ -150,7 +150,7 @@ EXERCISE = {
     "files_to_edit": [
         "exercises/05_capstone/workspace/.github/copilot-instructions.md",
         "exercises/05_capstone/workspace/.github/prompts/uart_handler.prompt.md",
-        "exercises/05_capstone/workspace/.github/prompts/sensor_calibration.prompt.md",
+        "exercises/05_capstone/workspace/.github/skills/sensor-calibration/SKILL.md",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,

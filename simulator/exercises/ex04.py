@@ -1,5 +1,6 @@
 """
-Exercise 04 — Skills (.prompt.md as a reusable skill)
+Exercise 04 — Skills (SKILL.md)
+The SKILL.md format: name (required, matches folder), description (required), body.
 Without domain skill: Copilot calibrates the ADC wrong → sensor reads 998 °C.
 """
 from pathlib import Path
@@ -9,29 +10,93 @@ _WS = WORKSPACE_ROOT / "exercises" / "04_skills" / "workspace"
 
 
 def _validate():
-    prompt_dir = _WS / ".github" / "prompts"
-    files = list(prompt_dir.glob("*.prompt.md")) if prompt_dir.exists() else []
-    if not files:
+    issues = []
+
+    # ── Check 1: .github/skills/ folder exists with at least one skill folder ──
+    skills_root = _WS / ".github" / "skills"
+    skill_dirs = [d for d in skills_root.iterdir() if d.is_dir()] if skills_root.exists() else []
+    if not skill_dirs:
         return False, (
-            "No skill file found in "
-            "`exercises/04_skills/workspace/.github/prompts/`\n"
-            "Create `sensor_calibration.prompt.md` as a reusable skill."
+            "❌ No skill folder found.\n"
+            "Create `.github/skills/sensor-calibration/SKILL.md` in the workspace.\n\n"
+            "**SKILL.md structure:**\n"
+            "```\n"
+            ".github/skills/<skill-name>/\n"
+            "└── SKILL.md   ← required (name must match folder)\n"
+            "```"
         )
-    raw = files[0].read_text()
-    if "# TODO" in raw or "TODO —" in raw:
+
+    skill_dir = skill_dirs[0]
+    skill_file = skill_dir / "SKILL.md"
+
+    # ── Check 2: SKILL.md file exists inside the folder ──────────────────────
+    if not skill_file.exists():
         return False, (
-            "Skill file is still the TODO template — replace it with a real skill.\n"
-            "Include the TMP36 formula, `convert_adc_to_temperature()` signature, Vref, and resolution."
+            f"❌ `SKILL.md` not found inside `{skill_dir.name}/`.\n"
+            "The file must be named exactly `SKILL.md` (uppercase)."
         )
-    content = raw.lower()
+
+    raw = skill_file.read_text()
+
+    # ── Check 3: Parse YAML front-matter ─────────────────────────────────────
+    fm_lines = raw.splitlines()
+    if not fm_lines or fm_lines[0].strip() != "---":
+        return False, (
+            "❌ `SKILL.md` has no YAML front-matter.\n"
+            "Add `---` markers at the top with `name:` and `description:` fields."
+        )
+    end = next((i for i, l in enumerate(fm_lines[1:], 1) if l.strip() == "---"), -1)
+    if end < 0:
+        return False, "❌ YAML front-matter not closed — add a closing `---`."
+    fm_content = "\n".join(fm_lines[1:end])
+
+    # ── Check 4: name: is present and matches folder name ─────────────────────
+    name_line = next((l for l in fm_content.splitlines() if l.strip().startswith("name:")), None)
+    if name_line is None:
+        issues.append(
+            "⚠ `name:` field missing from front-matter — it is **required** in `SKILL.md`.\n"
+            f"   Expected: `name: {skill_dir.name}`"
+        )
+    else:
+        name_value = name_line.split(":", 1)[-1].strip().strip('"').strip("'")
+        if name_value != skill_dir.name:
+            issues.append(
+                f"⚠ `name: {name_value}` does not match folder name `{skill_dir.name}`.\n"
+                "   The `name:` value must match the folder exactly."
+            )
+
+    # ── Check 5: description: is present and meaningful ───────────────────────
+    desc_line = next((l for l in fm_content.splitlines() if l.strip().startswith("description:")), None)
+    if desc_line is None:
+        issues.append(
+            "⚠ `description:` field missing — it is **required** in `SKILL.md`.\n"
+            "   Copilot uses it to decide when to load the skill automatically."
+        )
+    else:
+        desc_value = desc_line.split(":", 1)[-1].strip().strip('"').strip("'")
+        if desc_value.upper().startswith("TODO") or len(desc_value) < 25:
+            issues.append(
+                f"⚠ `description:` too vague ({len(desc_value)} chars).\n"
+                "   Be specific: name the domain, sensor, and function."
+            )
+
+    # ── Check 6: body contains domain knowledge ───────────────────────────────
+    body = "\n".join(fm_lines[end + 1:]).lower()
     required = ["adc", "calibr", "vref", "temperature", "formula"]
-    missing = [kw for kw in required if kw not in content]
+    missing = [kw for kw in required if kw not in body]
     if missing:
-        return False, (
-            f"Skill is incomplete — missing: **{', '.join(missing)}**\n"
-            "The skill must explain the Python ADC-to-temperature conversion: Vref, resolution, formula."
+        issues.append(
+            f"⚠ Skill body is missing domain content: **{', '.join(missing)}**\n"
+            "   Document the TMP36 formula, Vref=3.3V, and the conversion function."
         )
-    return True, "Skill file valid! Copilot now understands TMP36 calibration in Python."
+
+    if issues:
+        return False, "\n\n".join(issues)
+
+    return True, (
+        "✅ Skill validated!\n"
+        f"`name: {skill_dir.name}` matches folder · `description:` present · body has TMP36 domain knowledge."
+    )
 
 
 # ── Board states ──────────────────────────────────────────────────────────────
@@ -119,91 +184,87 @@ BOARD_FIXED = {
 # ── Exercise definition ───────────────────────────────────────────────────────
 
 EXERCISE = {
-    "title":   "Exercise 04 — Skills",
-    "concept": "`.prompt.md` skill · `SKILL.md` folder-based skill",
+    "title":   "Exercise 04 — SKILL.md",
+    "concept": "`SKILL.md` — packaged Copilot skill",
     "mission": (
         "**🎯 Mission:** The sensor is reading **998 °C** — the board triggered "
         "overheat protection and the FSM crashed to ERROR.\n\n"
-        "Copilot was asked to implement ADC-to-temperature conversion but had "
-        "no domain knowledge about the TMP36 sensor or ADC calibration. "
-        "It used the raw 12-bit ADC count directly as degrees Celsius.\n\n"
-        "**Option A — Quick skill:** Create a `sensor_calibration.prompt.md` in `.github/prompts/` "
-        "with a rich `description:` and the TMP36 formula.\n\n"
-        "**Option B — Packaged skill:** Create a `SKILL.md` inside `.github/skills/sensor-calibration/` "
-        "for a more structured, multi-asset skill with a `name:` field matching the folder.\n\n"
-        "💬 **Use Copilot Chat** to help you write the skill content!"
+        "Copilot had no domain knowledge about TMP36 ADC calibration and used "
+        "the raw 12-bit ADC count directly as degrees Celsius.\n\n"
+        "**Your task:** Create a proper `SKILL.md` to package the calibration "
+        "knowledge so Copilot can apply it automatically.\n\n"
+        "**3-step process:**\n"
+        "1. Create folder `.github/skills/sensor-calibration/`\n"
+        "2. Create `SKILL.md` inside it with required `name:` and `description:` front-matter\n"
+        "3. Write the skill body: when to use, TMP36 formula, function signature\n\n"
+        "💬 **Use Copilot Chat** to generate the skill content!"
     ),
-    "problem": "No domain skill → Copilot used raw ADC value as temperature (998 °C!)",
+    "problem": "No SKILL.md → Copilot used raw ADC value as temperature (998 °C!)",
     "hints": [
-        # prompt.md approach
-        "**`.prompt.md`** — quick skill: `sensor_calibration.prompt.md` in `.github/prompts/`",
-        "The **filename** (without extension) is the slash-command name — there is no `name:` field",
-        "`mode:` is optional (defaults to `ask`). Use `edit` for code generation skills",
-        # SKILL.md approach
-        "**`SKILL.md`** — packaged skill: `.github/skills/sensor-calibration/SKILL.md`",
-        "In `SKILL.md`, `name:` IS required and must match the folder name (e.g. `sensor-calibration`)",
-        "SKILL.md supports bundled assets: `scripts/`, `references/`, `assets/` sub-folders",
-        # formula
-        "TMP36 formula: `Temp (°C) = (Voltage - 0.5) / 0.01`",
-        "ADC voltage: `V = (adc_raw / (2**bits - 1)) * vref` where Vref = 3.3V, bits = 12",
-        "💬 Ask Copilot Chat: \"Write a TMP36 calibration skill for `.github/prompts/`\"",
+        # Structure
+        "Folder: `.github/skills/sensor-calibration/` — then create `SKILL.md` inside",
+        "`name:` is **required** and must match the folder name exactly: `sensor-calibration`",
+        "`description:` is **required** — Copilot reads it to decide when to auto-load the skill",
+        # Process
+        "Step 1 — front-matter: `name:` + `description:` between `---` markers",
+        "Step 2 — ## When to Use: describe the trigger (e.g. 'when converting TMP36 ADC readings')",
+        "Step 3 — ## Procedure: formula, function signature, constraints",
+        # Domain
+        "TMP36 formula: `voltage = (adc_raw / 4095) * 3.3` → `temp = (voltage - 0.5) / 0.01`",
+        "💬 Ask Copilot Chat: \"Write a SKILL.md for TMP36 ADC calibration — name: sensor-calibration\"",
     ],
     "files_to_edit": [
-        "exercises/04_skills/workspace/.github/prompts/sensor_calibration.prompt.md",
-        "(or) .github/skills/sensor-calibration/SKILL.md  (the SKILL.md approach)",
+        "exercises/04_skills/workspace/.github/skills/sensor-calibration/SKILL.md",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,
     "board_fixed":  BOARD_FIXED,
     "explanation": """## What changed?
 
-### Two ways to package a skill
+### SKILL.md — the packaged skill format
 
-#### A — `.prompt.md` (quick skill)
+```
+.github/skills/sensor-calibration/   ← folder name = skill name
+└── SKILL.md                          ← required, uppercase
+```
 
-File: `.github/prompts/sensor_calibration.prompt.md`
+### Required front-matter
 
 ```yaml
 ---
-description: TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)
-mode: edit   # optional
+name: sensor-calibration              # REQUIRED — must match folder name exactly
+description: "TMP36 ADC-to-temperature calibration (Vref=3.3V, 12-bit). Use when
+  generating sensor code in simulator/board/sensor.py."
 ---
 ```
 
-- The **filename** (`sensor_calibration`) is the slash-command name — no `name:` field exists here
-- Invoked via `/sensor_calibration` in Copilot Chat
-- Best for: single focused tasks with a prompt body
+| Field | Required? | Rule |
+|-------|-----------|------|
+| `name:` | ✅ yes | Must match folder name (lowercase, hyphens) |
+| `description:` | ✅ yes | Specific — Copilot auto-loads based on this |
 
----
+### The 3-step skill body
 
-#### B — `SKILL.md` (packaged skill)
+```markdown
+## When to Use
+Use when implementing or reviewing ADC sensor readings in the simulator.
 
-Folder: `.github/skills/sensor-calibration/SKILL.md`
+## Formula
+voltage = (adc_raw / (2**bits - 1)) × vref
+temp_c  = (voltage − 0.5) / 0.01
 
-```yaml
----
-name: sensor-calibration    # required — must match folder name
-description: 'TMP36 ADC calibration in Python. Use for sensor readings in simulator/board/sensor.py.'
----
+## Function Signature
+def convert_adc_to_temperature(adc_raw, vref=3.3, bits=12) -> float: ...
 ```
 
-- `name:` IS required and must match the folder name (lowercase, hyphens)
-- Supports bundled `scripts/`, `references/`, `assets/` folders
-- Best for: multi-step workflows with templates or helper scripts
+### Optional bundled assets
 
----
-
-### The TMP36 calibration formula
-
-```python
-def convert_adc_to_temperature(adc_raw: int, vref: float = 3.3, bits: int = 12) -> float:
-    voltage = (adc_raw / (2**bits - 1)) * vref
-    temp_c  = (voltage - 0.5) / 0.01
-    if temp_c < -40.0 or temp_c > 125.0:
-        return float('nan')
-    return round(temp_c, 1)
 ```
-
-Without a skill, Copilot has no way to know the TMP36 transfer function or that Vref = 3.3V.
+.github/skills/sensor-calibration/
+├── SKILL.md
+├── scripts/       ← executable helpers
+├── references/    ← docs loaded on-demand
+└── assets/        ← templates, boilerplate
+```
 """,
 }
