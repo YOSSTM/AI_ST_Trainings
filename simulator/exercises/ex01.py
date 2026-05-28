@@ -20,14 +20,20 @@ def _validate():
             "Create it in VS Code and add Python simulator context."
         )
     else:
-        content = target.read_text().lower()
-        required = ["python", "streamlit", "board", "naming", "simulator"]
-        missing = [kw for kw in required if kw not in content]
-        if missing:
+        raw = target.read_text()
+        if "# TODO" in raw:
             issues.append(
-                f"⚠ `copilot-instructions.md` is missing: **{', '.join(missing)}**\n"
-                "Mention: Python 3, Streamlit, board module structure, naming conventions."
+                "⚠ `copilot-instructions.md` is still the TODO template — replace it with real instructions."
             )
+        else:
+            content = raw.lower()
+            required = ["python", "streamlit", "board", "naming", "simulator"]
+            missing = [kw for kw in required if kw not in content]
+            if missing:
+                issues.append(
+                    f"⚠ `copilot-instructions.md` is missing: **{', '.join(missing)}**\n"
+                    "Mention: Python 3, Streamlit, board module structure, naming conventions."
+                )
 
     # ── Check 2: a scoped .instructions.md with applyTo ───────────────────────
     instr_dir = _WS / ".github" / "instructions"
@@ -73,7 +79,12 @@ def _validate():
             )
         else:
             desc_value = desc_line.split(":", 1)[-1].strip().strip('"').strip("'")
-            if len(desc_value) < 25:
+            if desc_value.upper().startswith("TODO"):
+                issues.append(
+                    "⚠ `description:` is still the TODO placeholder — replace it with a real description.\n"
+                    "   Example: `TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)`"
+                )
+            elif len(desc_value) < 25:
                 issues.append(
                     f"⚠ Description too vague ({len(desc_value)} chars): `{desc_value}`\n"
                     "   Make it specific: name the domain, action, and module."

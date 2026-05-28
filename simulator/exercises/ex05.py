@@ -16,9 +16,13 @@ def _validate():
     if not instr.exists():
         results.append("❌ Missing `.github/copilot-instructions.md`")
     else:
-        c = instr.read_text().lower()
-        if not all(kw in c for kw in ["embedded", "gpio", "uart", "naming"]):
-            results.append("⚠ `copilot-instructions.md` needs more embedded context")
+        raw = instr.read_text()
+        if "# TODO" in raw:
+            results.append("⚠ `copilot-instructions.md` is still the TODO template — fill it in")
+        else:
+            c = raw.lower()
+            if not all(kw in c for kw in ["embedded", "gpio", "uart", "naming"]):
+                results.append("⚠ `copilot-instructions.md` needs more embedded context")
 
     # Check 2: at least one prompt file
     prompts_dir = _WS / ".github" / "prompts"

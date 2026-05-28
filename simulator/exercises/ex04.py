@@ -17,7 +17,13 @@ def _validate():
             "`exercises/04_skills/workspace/.github/prompts/`\n"
             "Create `sensor_calibration.prompt.md` as a reusable skill."
         )
-    content = files[0].read_text().lower()
+    raw = files[0].read_text()
+    if "# TODO" in raw or "TODO —" in raw:
+        return False, (
+            "Skill file is still the TODO template — replace it with a real skill.\n"
+            "Include the TMP36 formula, `convert_adc_to_temperature()` signature, Vref, and resolution."
+        )
+    content = raw.lower()
     required = ["adc", "calibr", "vref", "temperature", "formula"]
     missing = [kw for kw in required if kw not in content]
     if missing:

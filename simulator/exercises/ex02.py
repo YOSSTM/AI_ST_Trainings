@@ -18,7 +18,13 @@ def _validate():
             "`exercises/02_prompts/workspace/.github/prompts/`\n"
             "Create `uart_handler.prompt.md` with structured prompt content."
         )
-    content = files[0].read_text().lower()
+    raw = files[0].read_text()
+    if "# TODO" in raw or "TODO —" in raw:
+        return False, (
+            "Prompt file is still the TODO template — replace it with a real structured prompt.\n"
+            "Describe the `uart_data` dict, message format, and reference `render_uart_console()`."
+        )
+    content = raw.lower()
     required = ["uart", "format", "message", "render_uart_console"]
     missing = [kw for kw in required if kw not in content]
     if missing:
