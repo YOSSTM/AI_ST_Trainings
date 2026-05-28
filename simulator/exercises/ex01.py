@@ -58,46 +58,13 @@ def _validate():
                 "   `applyTo: 'simulator/**/*.py'`"
             )
 
-    # ── Check 3: a .prompt.md skill with a rich description ───────────────────
-    prompts_dir = _WS / ".github" / "prompts"
-    prompt_files = list(prompts_dir.glob("*.prompt.md")) if prompts_dir.exists() else []
-    if not prompt_files:
-        issues.append(
-            "❌ No `.prompt.md` skill found in "
-            "`exercises/01_instructions/workspace/.github/prompts/`\n"
-            "Create `sensor_calibration.prompt.md` with a descriptive `description:` field."
-        )
-    else:
-        text = prompt_files[0].read_text()
-        desc_line = next(
-            (l for l in text.splitlines() if l.strip().startswith("description:")), None
-        )
-        if desc_line is None:
-            issues.append(
-                "⚠ Your prompt file has no `description:` field in the front-matter.\n"
-                "   Without it, the skill is invisible in Copilot's `/` prompt picker."
-            )
-        else:
-            desc_value = desc_line.split(":", 1)[-1].strip().strip('"').strip("'")
-            if desc_value.upper().startswith("TODO"):
-                issues.append(
-                    "⚠ `description:` is still the TODO placeholder — replace it with a real description.\n"
-                    "   Example: `TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)`"
-                )
-            elif len(desc_value) < 25:
-                issues.append(
-                    f"⚠ Description too vague ({len(desc_value)} chars): `{desc_value}`\n"
-                    "   Make it specific: name the domain, action, and module."
-                )
-
     if issues:
         return False, "\n\n".join(issues)
 
     return True, (
-        "All three configs in place!\n"
-        "`copilot-instructions.md` → global context\n"
-        "`.instructions.md` with `applyTo` → scoped to simulator Python files\n"
-        "`description:` in skill → discoverable in Copilot prompt picker"
+        "Both configs in place!\n"
+        "`copilot-instructions.md` → global project context\n"
+        "`.instructions.md` with `applyTo` → scoped to simulator Python files"
     )
 
 
@@ -115,7 +82,7 @@ BOARD_BROKEN = {
             "print('hello world')",
             "TypeError: unsupported operand",
             "[WARN]  instructions bleed into test_board.py",
-            "[ERROR] skill not found in prompt picker",
+            "[ERROR] no project context in copilot-instructions.md",
         ],
         "baud": 9600,
     },
@@ -133,7 +100,7 @@ BOARD_BROKEN = {
         ],
     },
     "status":     {"GPIO": "FAIL", "UART": "FAIL", "SENSOR": "FAIL", "FSM": "FAIL"},
-    "error_note": "No instructions → no context, no applyTo scope, skill invisible",
+    "error_note": "No instructions → no context, no applyTo scope",
 }
 
 BOARD_FIXED = {
@@ -146,8 +113,8 @@ BOARD_FIXED = {
     "uart": {
         "messages": [
             "[INFO]  simulator init OK",
+            "[INFO]  copilot-instructions.md loaded",
             "[INFO]  instructions scoped to simulator/**/*.py",
-            "[INFO]  skill 'TMP36 calibration' found in prompt picker",
             "[INFO]  FSM -> RUNNING",
         ],
         "baud": 115200,
@@ -181,10 +148,10 @@ BOARD_FIXED = {
 # ── Exercise definition ───────────────────────────────────────────────────────
 
 EXERCISE = {
-    "title":   "Exercise 01 — Instructions, applyTo & description",
-    "concept": "`copilot-instructions.md` · `applyTo` · `description`",
+    "title":   "Exercise 01 — copilot-instructions.md & applyTo",
+    "concept": "`copilot-instructions.md` · `applyTo`",
     "mission": (
-        "**🎯 Mission:** Three Copilot config fields are missing — the board is dead.\n\n"
+        "**🎯 Mission:** Two Copilot config files are missing — the board is dead.\n\n"
         "**Part A — Global instructions:**\n"
         "Create `.github/copilot-instructions.md` to teach Copilot that this is "
         "a Python/Streamlit simulator project.\n\n"
@@ -192,13 +159,10 @@ EXERCISE = {
         "Create `.github/instructions/simulator.instructions.md` "
         "with `applyTo: 'simulator/**/*.py'` — without it, instructions bleed "
         "into test files, notebooks, and configs.\n\n"
-        "**Part C — Discoverable skill:**\n"
-        "Create `.github/prompts/sensor_calibration.prompt.md` with a rich "
-        "`description:` field so the skill appears in Copilot's `/` prompt picker.\n\n"
         "💬 **Use Copilot Chat** to help you write these files! "
         "Open each workspace file and ask Copilot in Chat to generate the content."
     ),
-    "problem": "No copilot-instructions.md, no applyTo scope, no skill description — all broken!",
+    "problem": "No copilot-instructions.md, no applyTo scope — all broken!",
     "hints": [
         # Part A
         "`.github/copilot-instructions.md` applies globally to ALL Copilot interactions",
@@ -207,18 +171,12 @@ EXERCISE = {
         "`.github/instructions/*.instructions.md` files use YAML front-matter with `applyTo`",
         "Scope with a glob: `applyTo: 'simulator/**/*.py'` — only board simulator files",
         "Without `applyTo`, simulator conventions bleed into test files, notebooks, CI configs",
-        # Part C
-        "The **filename** is the skill name shown in the `/` picker — there is no `name:` field",
-        "The `description:` field in `.prompt.md` is what shows as the label in Copilot's `/` picker",
-        "`mode:` is **optional** (default: `ask`). Use `edit` for code-generation skills, `agent` for multi-file tasks",
-        "Make description specific: `TMP36 ADC calibration in Python (Vref=3.3V, 12-bit)`",
         # Copilot Chat
         "💬 Open a workspace file → ask Copilot Chat to generate the content — that's the exercise!",
     ],
     "files_to_edit": [
         "exercises/01_instructions/workspace/.github/copilot-instructions.md",
         "exercises/01_instructions/workspace/.github/instructions/simulator.instructions.md",
-        "exercises/01_instructions/workspace/.github/prompts/sensor_calibration.prompt.md",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,
@@ -250,27 +208,5 @@ Without `applyTo`, instructions apply to **every file** Copilot touches:
 test scripts, `.env`, notebooks, `requirements.txt`, CI configs...
 
 `applyTo` uses glob patterns to confine instructions to the right context.
-
----
-
-### Part C — `description:` (skill discoverability)
-
-```yaml
----
-description: TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)
-mode: edit      # optional — ask (default) | edit | agent
----
-```
-
-**Key facts about `.prompt.md` front-matter:**
-
-| Field | Required? | Purpose |
-|-------|-----------|---------|
-| `description` | ✅ **yes** (for discoverability) | Label shown in `/` picker; Copilot uses it to auto-suggest |
-| `mode` | ❌ optional (default: `ask`) | `ask` = chat, `edit` = code edit, `agent` = multi-step |
-| `name` | ❌ **does not exist** | The **filename** (`sensor_calibration`) IS the skill name |
-
-A vague description → the skill is **invisible**.  
-No `mode` → defaults to `ask` mode.
 """,
 }
