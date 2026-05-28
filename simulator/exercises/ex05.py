@@ -151,6 +151,7 @@ EXERCISE = {
         "exercises/05_capstone/workspace/.github/copilot-instructions.md",
         "exercises/05_capstone/workspace/.github/prompts/uart_handler.prompt.md",
         "exercises/05_capstone/workspace/.github/skills/sensor-calibration/SKILL.md",
+        "exercises/05_capstone/workspace/.github/agents/fsm-agent.agent.md",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,
@@ -165,7 +166,7 @@ You've now seen how **four complementary tools** work together:
 | `*.instructions.md` with `applyTo` | `.github/instructions/` | Scoped rules for specific file patterns |
 | `*.prompt.md` | `.github/prompts/` | Reusable prompts — **filename** is the slash-command name, `mode:` is optional |
 | `SKILL.md` | `.github/skills/<name>/` | Packaged skill — **`name:`** required, must match folder |
-| Agent mode | VS Code Chat dropdown | Navigate & edit across the whole codebase |
+| `*.agent.md` | `.github/agents/` | Custom agent — **`description:`** required, restrict `tools:` |
 
 Together they turn Copilot from a generic autocomplete into a **senior embedded SW engineer** that knows your exact project.
 """,

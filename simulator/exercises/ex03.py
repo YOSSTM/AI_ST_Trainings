@@ -1,6 +1,7 @@
 """
-Exercise 03 — Agent mode
-Without proper context: agent can't navigate the codebase → FSM stuck in INIT.
+Exercise 03 — Custom Agents (.agent.md)
+Without a scoped agent: Copilot edits everything → FSM transitions broken.
+With a custom agent: tools restricted to read+search+edit, description triggers it automatically.
 """
 from pathlib import Path
 
@@ -9,21 +10,78 @@ _WS = WORKSPACE_ROOT / "exercises" / "03_agents" / "workspace"
 
 
 def _validate():
-    instructions = _WS / ".github" / "copilot-instructions.md"
-    if not instructions.exists():
+    issues = []
+
+    # ── Check 1: .github/agents/ folder exists with at least one .agent.md ───
+    agents_dir = _WS / ".github" / "agents"
+    agent_files = list(agents_dir.glob("*.agent.md")) if agents_dir.exists() else []
+    if not agent_files:
         return False, (
-            "Missing `exercises/03_agents/workspace/.github/copilot-instructions.md`\n"
-            "Agents need instructions that describe the project structure."
+            "❌ No `.agent.md` file found.\n"
+            "Create `.github/agents/fsm-agent.agent.md` in the workspace.\n\n"
+            "**Location:** `.github/agents/*.agent.md`"
         )
-    content = instructions.read_text().lower()
-    required = ["fsm", "state", "transition", "agent", "codebase"]
-    missing = [kw for kw in required if kw not in content]
+
+    agent_file = agent_files[0]
+    raw = agent_file.read_text()
+
+    # ── Check 2: YAML front-matter ────────────────────────────────────────────
+    fm_lines = raw.splitlines()
+    if not fm_lines or fm_lines[0].strip() != "---":
+        return False, "❌ `.agent.md` has no YAML front-matter. Add `---` markers."
+    end = next((i for i, l in enumerate(fm_lines[1:], 1) if l.strip() == "---"), -1)
+    if end < 0:
+        return False, "❌ YAML front-matter not closed — add a closing `---`."
+    fm_content = "\n".join(fm_lines[1:end])
+
+    # ── Check 3: description is present and meaningful ────────────────────────
+    desc_line = next((l for l in fm_content.splitlines() if l.strip().startswith("description:")), None)
+    if desc_line is None:
+        issues.append(
+            "⚠ `description:` missing — it is **required** in `.agent.md`.\n"
+            "   Copilot uses it to decide when to invoke this agent automatically."
+        )
+    else:
+        desc_value = desc_line.split(":", 1)[-1].strip().strip('"').strip("'")
+        if len(desc_value) < 20:
+            issues.append(
+                f"⚠ `description:` too vague ({len(desc_value)} chars).\n"
+                "   Include trigger phrases, e.g. 'Use when modifying FSM transitions in simulator/board/fsm.py'"
+            )
+
+    # ── Check 4: tools are restricted (not unrestricted) ─────────────────────
+    tools_line = next((l for l in fm_content.splitlines() if l.strip().startswith("tools:")), None)
+    if tools_line is None:
+        issues.append(
+            "⚠ `tools:` field missing.\n"
+            "   Without it, the agent has unrestricted access. "
+            "   Restrict to: `tools: [read, search, edit]`"
+        )
+    else:
+        tools_value = tools_line.split(":", 1)[-1].strip().lower()
+        if "execute" in tools_value or "web" in tools_value:
+            issues.append(
+                "⚠ Agent has `execute` or `web` access — unnecessary for FSM editing.\n"
+                "   Restrict to: `tools: [read, search, edit]`"
+            )
+
+    # ── Check 5: body contains FSM context ────────────────────────────────────
+    body = "\n".join(fm_lines[end + 1:]).lower()
+    required = ["fsm", "transition", "simulator"]
+    missing = [kw for kw in required if kw not in body]
     if missing:
-        return False, (
-            f"Instructions don't mention: **{', '.join(missing)}**\n"
-            "The agent needs to know about the FSM architecture to complete transitions."
+        issues.append(
+            f"⚠ Agent body missing context: **{', '.join(missing)}**\n"
+            "   Tell the agent what it works on: FSM data dict, transition list, simulator/board/fsm.py"
         )
-    return True, "Agent context configured! The FSM can now complete its state transitions."
+
+    if issues:
+        return False, "\n\n".join(issues)
+
+    return True, (
+        "✅ Custom agent validated!\n"
+        "`description:` present · tools scoped · FSM context in body — agent is ready."
+    )
 
 
 # ── Board states ──────────────────────────────────────────────────────────────
@@ -115,43 +173,81 @@ BOARD_FIXED = {
 # ── Exercise definition ───────────────────────────────────────────────────────
 
 EXERCISE = {
-    "title":   "Exercise 03 — Agent Mode",
-    "concept": "Agent mode + codebase context",
+    "title":   "Exercise 03 — Custom Agents",
+    "concept": "`.github/agents/*.agent.md` — scoped agent with tool restrictions",
     "mission": (
-        "**🎯 Mission:** The FSM is **stuck in INIT** — it never transitions.\n\n"
-        "A developer used Copilot Agent to generate the FSM, but the agent had "
-        "no knowledge of the project structure. It generated an incomplete state "
-        "machine missing all transitions after INIT.\n\n"
-        "**Your task:** Update the `copilot-instructions.md` to give the agent "
-        "context about the FSM architecture, so it can navigate the codebase "
-        "and complete the missing transitions.\n\n"
-        "💬 **Use Copilot Chat** in **Agent mode** to test it: switch to agent mode → ask it to complete the FSM."
+        "**🎯 Mission:** The FSM is **stuck in INIT** — transitions were accidentally "
+        "overwritten because the agent had no boundaries.\n\n"
+        "A generic Copilot agent was asked to complete the FSM. Without a custom agent "
+        "definition, it had unrestricted access (execute, web, edit everything) and "
+        "modified files it shouldn't have touched.\n\n"
+        "**Your task:** Create a custom agent `.github/agents/fsm-agent.agent.md` that:\n"
+        "- Has a **`description:`** that tells Copilot when to invoke it\n"
+        "- Restricts **`tools:`** to `[read, search, edit]` — no terminal, no web\n"
+        "- Has a body explaining what it does: FSM transitions in `simulator/board/fsm.py`\n\n"
+        "💬 Once created, invoke it in Copilot Chat: type `@fsm-agent` and ask it to "
+        "complete the missing FSM transitions."
     ),
-    "problem": "Agent has no codebase context → FSM incomplete, stuck in INIT forever!",
+    "problem": "No custom agent → unrestricted agent overwrote FSM transitions!",
     "hints": [
-        "In agent mode, `copilot-instructions.md` is the agent's map of your project",
-        "Describe the FSM pattern: `fsm_data` dict with `states`, `current`, `transitions`",
-        "Tell the agent where modules live: `simulator/board/fsm.py`, `simulator/exercises/`",
-        "Add a `## Architecture` section describing module dependencies",
-        "💬 Switch to **Agent mode** in VS Code Copilot Chat (the dropdown next to the input box)",
-        "💬 In agent mode, ask: \"Add the missing INIT → IDLE transition to the FSM\"",
+        "Custom agents live in `.github/agents/*.agent.md`",
+        "`description:` is **required** — Copilot reads it to auto-invoke the agent",
+        "Include trigger phrases: 'Use when modifying FSM transitions in simulator/board/fsm.py'",
+        "`tools:` restricts what the agent can do — `[read, search, edit]` is enough for FSM work",
+        "Without `tools:`, agent has unrestricted access (including `execute` and `web`)",
+        "Body: describe the FSM data dict — `states`, `current`, `transitions: list[tuple]`",
+        "💬 After creating the file, type `@fsm-agent` in Copilot Chat to invoke it",
+        "💬 Ask it: \"Add the missing INIT → IDLE and IDLE → RUNNING transitions\"",
     ],
     "files_to_edit": [
-        "exercises/03_agents/workspace/.github/copilot-instructions.md"
+        "exercises/03_agents/workspace/.github/agents/fsm-agent.agent.md",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,
     "board_fixed":  BOARD_FIXED,
     "explanation": """## What changed?
 
-Agents navigate your **entire codebase** autonomously. Without context they:
-- Miss files that define patterns they should follow
-- Generate isolated code that doesn't integrate with existing modules
-- Skip registering callbacks or transitions because they don't know they exist
+### Why custom agents?
 
-By describing the FSM architecture in `copilot-instructions.md`, the agent:
-- Knows to look in `src/fsm.c` for the state machine implementation
-- Understands that `FSM_AddTransition(src, dst, guard, action)` must be called
-- Can trace the call graph to find where to add the missing `INIT → IDLE` transition
+A **generic Copilot agent** has unrestricted tools by default:
+
+| Tool | Risk without scoping |
+|------|---------------------|
+| `execute` | Runs arbitrary shell commands |
+| `web` | Fetches external URLs |
+| `edit` | Edits ANY file in the repo |
+
+A **custom agent** (`fsm-agent.agent.md`) scopes all of this:
+
+```yaml
+---
+description: "FSM specialist for simulator/board/fsm.py. Use when adding or reviewing
+  state transitions in the VirtualBoard FSM data dict."
+tools: [read, search, edit]
+---
+```
+
+### The `.agent.md` format
+
+```
+.github/agents/
+└── fsm-agent.agent.md   ← filename = @fsm-agent in chat
+```
+
+| Front-matter field | Required? | Purpose |
+|--------------------|-----------|---------|
+| `description:` | ✅ yes | Copilot reads this to auto-invoke the agent |
+| `tools:` | recommended | Restrict to minimum needed (`read`, `search`, `edit`) |
+| `name:` | optional | Display name (defaults to filename) |
+| `model:` | optional | Lock to a specific model |
+
+### Invoking in Copilot Chat
+
+```
+@fsm-agent Add the missing INIT → IDLE transition
+```
+
+The agent reads `simulator/board/fsm.py`, finds the `fsm_data` dict,
+and adds only what's needed — it cannot accidentally run tests or push code.
 """,
 }
