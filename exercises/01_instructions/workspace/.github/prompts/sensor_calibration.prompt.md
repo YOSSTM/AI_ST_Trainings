@@ -1,5 +1,4 @@
 ---
-mode: edit
 description: "TODO: Replace this with a specific description (min 25 chars). Example: TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)"
 ---
 

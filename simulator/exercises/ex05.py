@@ -134,16 +134,18 @@ EXERCISE = {
         "the board back to life:\n"
         "- ✅ `copilot-instructions.md` with embedded context\n"
         "- ✅ `.prompt.md` for UART handler\n"
-        "- ✅ Skill prompt for sensor calibration\n"
-        "- ✅ Agent instructions for FSM navigation"
+        "- ✅ Skill (`.prompt.md` **or** `SKILL.md`) for sensor calibration\n"
+        "- ✅ Agent instructions for FSM navigation\n\n"
+        "💬 **Use Copilot Chat freely** — this is the capstone, no restrictions!"
     ),
     "problem": "All Copilot configs deleted — board completely dead!",
     "hints": [
         "Re-use your fixes from exercises 01–04",
-        "Copy `.github/` folder from each exercise workspace",
         "Instructions + prompts + skills all go in `.github/`",
+        "Remember: `.prompt.md` filename = skill name; `SKILL.md` requires `name:` matching the folder",
+        "`mode:` is always optional in `.prompt.md` (defaults to `ask`)",
         "Check Correction mode on each previous exercise for reference",
-        "The validate button checks instructions AND at least one prompt file",
+        "💬 Open Copilot Chat, switch to **Agent mode**, and ask it to reconstruct the configs",
     ],
     "files_to_edit": [
         "exercises/05_capstone/workspace/.github/copilot-instructions.md",
@@ -160,9 +162,10 @@ You've now seen how **four complementary tools** work together:
 | Tool | Where it lives | What it teaches Copilot |
 |------|---------------|------------------------|
 | `copilot-instructions.md` | `.github/` | Tech stack, conventions, architecture |
-| `.prompt.md` | `.github/prompts/` | Reusable, structured generation tasks |
-| Agent mode | VS Code sidebar | Navigate & edit across the whole codebase |
-| Skills | `.github/prompts/` | Domain expertise (ADC, protocols, etc.) |
+| `*.instructions.md` with `applyTo` | `.github/instructions/` | Scoped rules for specific file patterns |
+| `*.prompt.md` | `.github/prompts/` | Reusable prompts — **filename** is the slash-command name, `mode:` is optional |
+| `SKILL.md` | `.github/skills/<name>/` | Packaged skill — **`name:`** required, must match folder |
+| Agent mode | VS Code Chat dropdown | Navigate & edit across the whole codebase |
 
 Together they turn Copilot from a generic autocomplete into a **senior embedded SW engineer** that knows your exact project.
 """,

@@ -1,5 +1,4 @@
 ---
-mode: edit
 description: TODO — TMP36 sensor calibration skill (Python)
 ---
 

@@ -124,15 +124,17 @@ EXERCISE = {
         "machine missing all transitions after INIT.\n\n"
         "**Your task:** Update the `copilot-instructions.md` to give the agent "
         "context about the FSM architecture, so it can navigate the codebase "
-        "and complete the missing transitions."
+        "and complete the missing transitions.\n\n"
+        "💬 **Use Copilot Chat** in **Agent mode** to test it: switch to agent mode → ask it to complete the FSM."
     ),
     "problem": "Agent has no codebase context → FSM incomplete, stuck in INIT forever!",
     "hints": [
         "In agent mode, `copilot-instructions.md` is the agent's map of your project",
-        "Describe the FSM pattern: states, transitions, and the `FSM_Transition()` function",
-        "Tell the agent where each module lives: `src/fsm.c`, `src/gpio.c`, etc.",
-        "Mention that transitions must be registered via `FSM_AddTransition()`",
+        "Describe the FSM pattern: `fsm_data` dict with `states`, `current`, `transitions`",
+        "Tell the agent where modules live: `simulator/board/fsm.py`, `simulator/exercises/`",
         "Add a `## Architecture` section describing module dependencies",
+        "💬 Switch to **Agent mode** in VS Code Copilot Chat (the dropdown next to the input box)",
+        "💬 In agent mode, ask: \"Add the missing INIT → IDLE transition to the FSM\"",
     ],
     "files_to_edit": [
         "exercises/03_agents/workspace/.github/copilot-instructions.md"

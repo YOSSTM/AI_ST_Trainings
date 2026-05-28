@@ -133,15 +133,17 @@ EXERCISE = {
         "but with a vague one-liner prompt: *'write a uart handler'*. "
         "The result: buffer overflow, garbled bytes, FSM stuck in ERROR.\n\n"
         "**Your task:** Write a proper `.prompt.md` file that gives Copilot "
-        "enough context to generate a correct UART handler."
+        "enough context to generate a correct UART handler.\n\n"
+        "💬 **Use Copilot Chat** to help you write it! Open the workspace file and ask Copilot to fill it in."
     ),
     "problem": "Prompt too vague → Copilot generated a UART handler with buffer overflow!",
     "hints": [
-        "A `.prompt.md` lives in `.github/prompts/` — name it `uart_handler.prompt.md`",
-        "Start with a `mode` front-matter: `mode: ask` or `mode: edit`",
-        "Describe: message format, buffer size (e.g. 64 bytes), HAL API to use",
-        "Include: `HAL_UART_Transmit(&huart2, buf, len, HAL_MAX_DELAY)`",
-        "Specify: log level prefix [INFO]/[DEBUG], null-termination, error handling",
+        "A `.prompt.md` lives in `.github/prompts/` — the **filename** is the slash-command name",
+        "`mode:` is **optional** (default: `ask`). Add `mode: edit` for code-generation prompts",
+        "There is **no `name:` field** in `.prompt.md` — use `description:` as the label",
+        "Describe: `uart_data` dict structure, `messages: list[str]`, `baud: int`",
+        "Include: message format `[LEVEL]  text` and `render_uart_console()` function reference",
+        "💬 Try in Copilot Chat: `/uart_handler` once the file exists to invoke it directly",
     ],
     "files_to_edit": [
         "exercises/02_prompts/workspace/.github/prompts/uart_handler.prompt.md"

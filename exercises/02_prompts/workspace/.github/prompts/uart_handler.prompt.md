@@ -1,5 +1,4 @@
 ---
-mode: edit
 description: TODO — fill in a proper UART message prompt for the Python simulator
 ---
 

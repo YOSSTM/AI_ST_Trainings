@@ -1,5 +1,4 @@
 ---
-mode: edit
 description: TODO — sensor calibration skill (currently empty)
 ---
 

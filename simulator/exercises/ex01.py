@@ -194,7 +194,9 @@ EXERCISE = {
         "into test files, notebooks, and configs.\n\n"
         "**Part C — Discoverable skill:**\n"
         "Create `.github/prompts/sensor_calibration.prompt.md` with a rich "
-        "`description:` field so the skill appears in Copilot's `/` prompt picker."
+        "`description:` field so the skill appears in Copilot's `/` prompt picker.\n\n"
+        "💬 **Use Copilot Chat** to help you write these files! "
+        "Open each workspace file and ask Copilot in Chat to generate the content."
     ),
     "problem": "No copilot-instructions.md, no applyTo scope, no skill description — all broken!",
     "hints": [
@@ -206,9 +208,12 @@ EXERCISE = {
         "Scope with a glob: `applyTo: 'simulator/**/*.py'` — only board simulator files",
         "Without `applyTo`, simulator conventions bleed into test files, notebooks, CI configs",
         # Part C
-        "The `description:` field in `.prompt.md` is what shows in Copilot's `/` picker",
-        "Make it specific: `description: TMP36 ADC calibration in Python (Vref=3.3V, 12-bit)`",
-        "Copilot uses `description` to decide when to auto-suggest the skill",
+        "The **filename** is the skill name shown in the `/` picker — there is no `name:` field",
+        "The `description:` field in `.prompt.md` is what shows as the label in Copilot's `/` picker",
+        "`mode:` is **optional** (default: `ask`). Use `edit` for code-generation skills, `agent` for multi-file tasks",
+        "Make description specific: `TMP36 ADC calibration in Python (Vref=3.3V, 12-bit)`",
+        # Copilot Chat
+        "💬 Open a workspace file → ask Copilot Chat to generate the content — that's the exercise!",
     ],
     "files_to_edit": [
         "exercises/01_instructions/workspace/.github/copilot-instructions.md",
@@ -252,18 +257,20 @@ test scripts, `.env`, notebooks, `requirements.txt`, CI configs...
 
 ```yaml
 ---
-mode: edit
 description: TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)
+mode: edit      # optional — ask (default) | edit | agent
 ---
 ```
 
-The `description` field does three jobs:
-| Job | What it affects |
-|-----|-----------------|
-| **Prompt picker label** | Shown when you type `/` in Copilot Chat |
-| **Auto-suggest trigger** | Copilot reads it to proactively offer the skill |
-| **Team documentation** | Tells colleagues what the skill is for |
+**Key facts about `.prompt.md` front-matter:**
 
-A vague description → the skill is **invisible**.
+| Field | Required? | Purpose |
+|-------|-----------|---------|
+| `description` | ✅ **yes** (for discoverability) | Label shown in `/` picker; Copilot uses it to auto-suggest |
+| `mode` | ❌ optional (default: `ask`) | `ask` = chat, `edit` = code edit, `agent` = multi-step |
+| `name` | ❌ **does not exist** | The **filename** (`sensor_calibration`) IS the skill name |
+
+A vague description → the skill is **invisible**.  
+No `mode` → defaults to `ask` mode.
 """,
 }

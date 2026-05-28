@@ -120,36 +120,82 @@ BOARD_FIXED = {
 
 EXERCISE = {
     "title":   "Exercise 04 — Skills",
-    "concept": "Reusable `.prompt.md` skill",
+    "concept": "`.prompt.md` skill · `SKILL.md` folder-based skill",
     "mission": (
         "**🎯 Mission:** The sensor is reading **998 °C** — the board triggered "
         "overheat protection and the FSM crashed to ERROR.\n\n"
         "Copilot was asked to implement ADC-to-temperature conversion but had "
-        "no domain knowledge about the TMP36 sensor or STM32 ADC calibration. "
+        "no domain knowledge about the TMP36 sensor or ADC calibration. "
         "It used the raw 12-bit ADC count directly as degrees Celsius.\n\n"
-        "**Your task:** Create a reusable prompt skill that teaches Copilot "
-        "the ADC calibration formula for the TMP36 sensor."
+        "**Option A — Quick skill:** Create a `sensor_calibration.prompt.md` in `.github/prompts/` "
+        "with a rich `description:` and the TMP36 formula.\n\n"
+        "**Option B — Packaged skill:** Create a `SKILL.md` inside `.github/skills/sensor-calibration/` "
+        "for a more structured, multi-asset skill with a `name:` field matching the folder.\n\n"
+        "💬 **Use Copilot Chat** to help you write the skill content!"
     ),
     "problem": "No domain skill → Copilot used raw ADC value as temperature (998 °C!)",
     "hints": [
-        "Create `sensor_calibration.prompt.md` in `.github/prompts/`",
+        # prompt.md approach
+        "**`.prompt.md`** — quick skill: `sensor_calibration.prompt.md` in `.github/prompts/`",
+        "The **filename** (without extension) is the slash-command name — there is no `name:` field",
+        "`mode:` is optional (defaults to `ask`). Use `edit` for code generation skills",
+        # SKILL.md approach
+        "**`SKILL.md`** — packaged skill: `.github/skills/sensor-calibration/SKILL.md`",
+        "In `SKILL.md`, `name:` IS required and must match the folder name (e.g. `sensor-calibration`)",
+        "SKILL.md supports bundled assets: `scripts/`, `references/`, `assets/` sub-folders",
+        # formula
         "TMP36 formula: `Temp (°C) = (Voltage - 0.5) / 0.01`",
-        "ADC voltage: `V = (ADC_raw / 4095.0) * Vref` where Vref = 3.3V",
-        "Mention the HAL call: `HAL_ADC_GetValue(&hadc1)` returns uint32_t",
-        "Include: always run `HAL_ADCEx_Calibration_Start()` before first reading",
+        "ADC voltage: `V = (adc_raw / (2**bits - 1)) * vref` where Vref = 3.3V, bits = 12",
+        "💬 Ask Copilot Chat: \"Write a TMP36 calibration skill for `.github/prompts/`\"",
     ],
     "files_to_edit": [
-        "exercises/04_skills/workspace/.github/prompts/sensor_calibration.prompt.md"
+        "exercises/04_skills/workspace/.github/prompts/sensor_calibration.prompt.md",
+        "(or) .github/skills/sensor-calibration/SKILL.md  (the SKILL.md approach)",
     ],
     "validate": _validate,
     "board_broken": BOARD_BROKEN,
     "board_fixed":  BOARD_FIXED,
     "explanation": """## What changed?
 
-A well-written **skill prompt** gives Copilot domain knowledge it wouldn't have otherwise:
+### Two ways to package a skill
+
+#### A — `.prompt.md` (quick skill)
+
+File: `.github/prompts/sensor_calibration.prompt.md`
+
+```yaml
+---
+description: TMP36 ADC calibration in Python (12-bit ADC, Vref=3.3V)
+mode: edit   # optional
+---
+```
+
+- The **filename** (`sensor_calibration`) is the slash-command name — no `name:` field exists here
+- Invoked via `/sensor_calibration` in Copilot Chat
+- Best for: single focused tasks with a prompt body
+
+---
+
+#### B — `SKILL.md` (packaged skill)
+
+Folder: `.github/skills/sensor-calibration/SKILL.md`
+
+```yaml
+---
+name: sensor-calibration    # required — must match folder name
+description: 'TMP36 ADC calibration in Python. Use for sensor readings in simulator/board/sensor.py.'
+---
+```
+
+- `name:` IS required and must match the folder name (lowercase, hyphens)
+- Supports bundled `scripts/`, `references/`, `assets/` folders
+- Best for: multi-step workflows with templates or helper scripts
+
+---
+
+### The TMP36 calibration formula
 
 ```python
-# TMP36 calibration in Python (12-bit ADC, Vref=3.3V):
 def convert_adc_to_temperature(adc_raw: int, vref: float = 3.3, bits: int = 12) -> float:
     voltage = (adc_raw / (2**bits - 1)) * vref
     temp_c  = (voltage - 0.5) / 0.01
@@ -158,11 +204,6 @@ def convert_adc_to_temperature(adc_raw: int, vref: float = 3.3, bits: int = 12) 
     return round(temp_c, 1)
 ```
 
-Without this skill, Copilot has no way to know:
-- That TMP36 output needs `(V - 0.5) / 0.01` conversion
-- That Vref is 3.3V (not 5V)
-- That the result should be validated for range (-40 to 125 °C)
-
-Skills = reusable Copilot domain expertise your whole team shares.
+Without a skill, Copilot has no way to know the TMP36 transfer function or that Vref = 3.3V.
 """,
 }
